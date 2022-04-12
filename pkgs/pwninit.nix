@@ -8,15 +8,15 @@ rustPlatform.buildRustPackage rec {
     owner = "io12";
     repo = pname;
     rev = version;
-    sha256 = "1hqps7l5qrjh9f914r5i6kmcz6f1yb951nv4lby0cjnp5l253kps";
+    sha256 = "sha256-XKDYJH2SG3TkwL+FN6rXDap8la07icR0GPFiYcnOHeI=";
   };
 
-  cargoSha256 = "03wf9r2csi6jpa7v5sw5lpxkrk4wfzwmzx7k3991q3bdjzcwnnwp";
+  cargoSha256 = "sha256-2HCHiU309hbdwohUKVT3TEfGvOfxQWtEGj7FIS8OS7s=";
 
   meta = with lib; {
-    description = "A fast line-oriented regex search tool, similar to ag and ack";
-    homepage = "https://github.com/BurntSushi/ripgrep";
+    description = "todo";
+    homepage = "https://github.com/io12/pwninit";
     license = licenses.unlicense;
-    maintainers = [ maintainers.tailhook ];
+    maintainers = with maintainers; [ mic92 ];
   };
 }

@@ -18,7 +18,10 @@ let
       zshNew = self.callPackage ./pkgs/zsh.nix { };
       gdb = self.callPackage ./pkgs/gdb.nix { gdb = super.gdb; };
       qemu = self.callPackage ./pkgs/qemu.nix { qemu = super.qemu; };
-      pwndbg = self.callPackage ./pkgs/pwndbg.nix {};
+
+      pwndbg = self.callPackage ./pkgs/pwndbg.nix { };
+      gef = self.callPackage ./pkgs/gef.nix { };
+      pwninit = self.callPackage ./pkgs/pwninit.nix { };
 
       #capstone = super.capstone.overrideAttrs (oldAttrs: rec {
       #  version = "5.0.0";
@@ -33,7 +36,7 @@ let
       # FIXME: troche ugly ale dziala - generalnie to dziwnie tutaj wyglada, ale nie wiem jak inaczej zrobic
       # python packages
       packageOverrides = self2: super2: {
-        pwntools = self2.callPackage ./pkgs/pwntools.nix { debugger = pwndbg; };
+        pwntools = self2.callPackage ./pkgs/pwntools.nix { debugger = gef; };
       };
       python3 = super.python3.override { inherit packageOverrides; };
     });
@@ -50,10 +53,14 @@ in
     pkgs.mkShell {
         nativeBuildInputs = [
             pkgs.zshNew
+
             pkgs.gdb
+#            pkgs.pwninit
+
+            pkgs.pwndbg
+            pkgs.gef
 
             pkgs.gcc
-            pkgs.pwndbg
             pkgs.tmux
             pkgs.binutils  # objdump
             pkgs.arm-binutils  # arm-none-eabi-XXXXX
@@ -68,7 +75,7 @@ in
             pkgs.less
             pythonEnv
         ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-            pkgs.qemu
+#            pkgs.qemu
             pkgs.checksec
         ];
     }
