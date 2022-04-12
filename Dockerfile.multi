@@ -1,0 +1,38 @@
+ARG frombuild
+FROM $frombuild as ubuntu-nix
+
+RUN apt-get update && apt-get install -y wget tar xz-utils && rm -rf /var/lib/apt/lists/*
+
+ARG NIX_VERSION=2.7.0
+RUN wget --no-check-certificate https://nixos.org/releases/nix/nix-${NIX_VERSION}/nix-${NIX_VERSION}-$(uname -m)-linux.tar.xz \
+  && tar xf nix-${NIX_VERSION}-$(uname -m)-linux.tar.xz \
+  && addgroup --gid 30000 --system nixbld \
+  && for i in $(seq 1 30); do adduser --system --disabled-password --no-create-home --home /var/empty --gecos "Nix build user $i" --uid $((30000 + i)) --ingroup nixbld nixbld$i ; adduser nixbld$i nixbld; done \
+  && mkdir -m 0755 /etc/nix \
+  && echo 'sandbox = false' > /etc/nix/nix.conf \
+  && echo 'filter-syscalls = false' >> /etc/nix/nix.conf \
+  && echo 'substitute = true' >> /etc/nix/nix.conf \
+  && echo 'substituters = file:///work/nix https://cache.nixos.org/' >> /etc/nix/nix.conf \
+  && echo 'require-sigs = false' >> /etc/nix/nix.conf \
+  && echo 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf \
+  && mkdir -m 0755 /nix && USER=root sh nix-${NIX_VERSION}-$(uname -m)-linux/install \
+  && ln -s /nix/var/nix/profiles/default/etc/profile.d/nix.sh /etc/profile.d/ \
+  && rm -r /nix-${NIX_VERSION}-$(uname -m)-linux* \
+  && rm -rf /var/cache/apk/* \
+  && /nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-old \
+  && /nix/var/nix/profiles/default/bin/nix-store --optimise \
+  && /nix/var/nix/profiles/default/bin/nix-store --verify --check-contents
+
+ENV \
+    ENV=/etc/profile \
+    USER=root \
+    PATH=/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/default/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+    NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    NIX_PATH=/nix/var/nix/profiles/per-user/root/channels
+
+RUN apt-get update -y && \
+    apt-get install libc6-i386 -y || true && \
+    nix-channel --add https://github.com/NixOS/nixpkgs/archive/master.tar.gz nixpkgs && \
+    nix-channel --update
+
