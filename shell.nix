@@ -55,7 +55,7 @@ in
             pkgs.zshNew
 
             pkgs.gdb
-#            pkgs.pwninit
+            pkgs.pwninit
 
             pkgs.pwndbg
             pkgs.gef

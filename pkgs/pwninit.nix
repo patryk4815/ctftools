@@ -1,8 +1,39 @@
-{ lib, fetchFromGitHub, rustPlatform }:
+{ lib
+, fetchFromGitHub
+, makeWrapper
+, pkg-config
+, lzma
+, patchelf
+, elfutils
+, openssl
+, rustPlatform
+}:
 
 rustPlatform.buildRustPackage rec {
   pname = "pwninit";
   version = "3.2.0";
+
+  nativeBuildInputs = [
+    pkg-config
+  ];
+
+  buildInputs = [
+    makeWrapper
+
+    # package dependency
+    lzma
+    openssl
+  ];
+
+  # TODO: patch path for eu-unstrip ? -> https://github.com/io12/pwninit/blob/14d4b4f21b77c4b8a0bdb110ea5a578e715731af/src/unstrip_libc.rs#L32
+  # TODO: patch path for patchelf in code? -> https://github.com/io12/pwninit/blob/master/src/patch_bin.rs#L53
+  postFixup = ''
+    wrapProgram $out/bin/pwninit \
+      --set PATH ${lib.makeBinPath [
+        elfutils
+        patchelf
+      ]}
+  '';
 
   src = fetchFromGitHub {
     owner = "io12";
@@ -17,6 +48,6 @@ rustPlatform.buildRustPackage rec {
     description = "todo";
     homepage = "https://github.com/io12/pwninit";
     license = licenses.unlicense;
-    maintainers = with maintainers; [ mic92 ];
+    maintainers = with maintainers; [ msm ];
   };
 }
