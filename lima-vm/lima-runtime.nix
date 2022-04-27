@@ -3,7 +3,30 @@
 let
     LIMA_CIDATA_MNT = "/mnt/lima-cidata"; # FIXME: hardcoded
 
-    userData = builtins.readFile "${LIMA_CIDATA_MNT}/user-data";
+    # Nix can only natively “import” TOML, JSON and Nix. Nix lacks YAML support.
+    # This has some drawbacks, mainly that yj needs to be available at evaluation time
+    # (so if it’s not cached you are looking at building it) and evaluation will block on the
+    # build of the converted JSON as evaluation is single-threaded.
+    fromYAML = yaml: builtins.fromJSON (
+        builtins.readFile (
+          pkgs.runCommandNoCC "from-yaml"
+            {
+              inherit yaml;
+              allowSubstitutes = false;
+              preferLocalBuild = true;
+            }
+            ''
+              ${pkgs.remarshal}/bin/remarshal  \
+                -if yaml \
+                -i <(echo "$yaml") \
+                -of json \
+                -o $out
+            ''
+        )
+    );
+    readYAML = path: fromYAML (builtins.readFile path);
+
+    userData = readYAML "${LIMA_CIDATA_MNT}/user-data";
     envsContent = lib.forEach (lib.splitString "\n" (builtins.readFile "${LIMA_CIDATA_MNT}/lima.env")) (x: (lib.splitString "=" x));
     envFromContentList = envName: lib.forEach (builtins.filter (x: (builtins.match ("^"+envName+"$") (builtins.elemAt x 0)) != null) envsContent) (x: builtins.elemAt x 1);
     envFromContent = envName: lib.last(envFromContentList envName);
@@ -18,15 +41,25 @@ let
     LIMA_CIDATA_MOUNTS = lib.toInt (envFromContent "LIMA_CIDATA_MOUNTS");
 
     LIMA_MOUNTPOINTS = envFromContentList "LIMA_CIDATA_MOUNTS_[0-9]+_MOUNTPOINT";
-    LIMA_SSH_KEYS = lib.forEach (builtins.filter (x: x != null) (lib.forEach (lib.splitString "\n" userData) (x: (builtins.match ".*[\"](ssh-.*)[\"]" x)))) (x: lib.last x);
+    LIMA_SSH_KEYS = (lib.elemAt (userData . "users") 0) . "ssh-authorized-keys";
 
-    # TODO: if [ "${LIMA_CIDATA_MOUNTTYPE}" != "9p" ]
-    script_mounts = lib.concatStringsSep "\n" (lib.forEach LIMA_MOUNTPOINTS (mountpoint:
+    script_mounts = if LIMA_CIDATA_MOUNTTYPE != "9p" then (lib.concatStringsSep "\n" (lib.forEach LIMA_MOUNTPOINTS (mountpoint:
         ''
         mkdir -p "${mountpoint}";
         chown "${toString LIMA_CIDATA_UID}:$gid" "${mountpoint}";
         ''
-    ));
+    ))) else "";
+
+    fileSystemsMount = (lib.zipAttrsWith (name: values: (lib.elemAt values 0)) (lib.forEach (userData . "mounts") (row:
+        {
+            ${(lib.elemAt row 1)} = {
+                device = (lib.elemAt row 0);
+                fsType = (lib.elemAt row 2);
+                options = (lib.splitString "," (lib.elemAt row 3));
+            };
+        }
+    )));
+
     script = ''
     echo "fix symlink for /bin/bash"
     ln -fs /run/current-system/sw/bin/bash /bin/bash
@@ -89,13 +122,13 @@ in {
         openssh.authorizedKeys.keys = LIMA_SSH_KEYS;
     };
 
+    fileSystems = fileSystemsMount;
+
     networking.extraHosts = ''
         ${LIMA_CIDATA_SLIRP_GATEWAY} host.lima.internal
     '';
 
-    programs.fuse = {
-        userAllowOther = true;  # TODO: if "${LIMA_CIDATA_MOUNTTYPE}" = "reverse-sshfs"
-    };
+    programs.fuse = if LIMA_CIDATA_MOUNTTYPE == "reverse-sshfs" then { userAllowOther = true; } else { };
 
     environment.etc = {
         environment.source = "${LIMA_CIDATA_MNT}/etc_environment";  # FIXME: better handle?
@@ -103,21 +136,13 @@ in {
 
     networking.nat = {
         enable = true;
-        externalInterface = "enp0s1";  # FIXME: better handle?
-        forwardPorts = [
-            {
-                sourcePort = 53;
-                loopbackIPs = [ "${LIMA_CIDATA_SLIRP_DNS}" ];
-                destination = "${LIMA_CIDATA_SLIRP_GATEWAY}:${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}";
-                proto = "udp";
-            }
-            {
-                sourcePort = 53;
-                loopbackIPs = [ "${LIMA_CIDATA_SLIRP_DNS}" ];
-                destination = "${LIMA_CIDATA_SLIRP_GATEWAY}:${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}";
-                proto = "tcp";
-            }
-        ];
+        extraCommands = ''
+            iptables -t nat -A nixos-nat-out -d ${LIMA_CIDATA_SLIRP_DNS} -p udp -m udp --dport 53 -j DNAT --to-destination ${LIMA_CIDATA_SLIRP_GATEWAY}:${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}
+            iptables -t nat -A nixos-nat-pre -d ${LIMA_CIDATA_SLIRP_DNS} -p udp -m udp --dport 53 -j DNAT --to-destination ${LIMA_CIDATA_SLIRP_GATEWAY}:${LIMA_CIDATA_UDP_DNS_LOCAL_PORT}
+
+            iptables -t nat -A nixos-nat-out -d ${LIMA_CIDATA_SLIRP_DNS} -p tcp -m tcp --dport 53 -j DNAT --to-destination ${LIMA_CIDATA_SLIRP_GATEWAY}:${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}
+            iptables -t nat -A nixos-nat-pre -d ${LIMA_CIDATA_SLIRP_DNS} -p tcp -m tcp --dport 53 -j DNAT --to-destination ${LIMA_CIDATA_SLIRP_GATEWAY}:${LIMA_CIDATA_TCP_DNS_LOCAL_PORT}
+        '';
     };
 
 }
