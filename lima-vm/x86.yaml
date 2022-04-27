@@ -1,0 +1,75 @@
+arch: "x86_64"
+# arch: "aarch64"
+
+images:
+  - location: "./imgs/nixos-aarch64.img"
+    arch: "aarch64"
+  - location: "./imgs/nixos-x86.img"
+    arch: "x86"
+
+
+# CPUs: if you see performance issues, try limiting cpus to 1.
+# 🟢 Builtin default: 4
+cpus: 8
+
+# Memory size
+# 🟢 Builtin default: "4GiB"
+memory: "8GiB"
+
+# Disk size
+# 🟢 Builtin default: "100GiB"
+disk: "100GiB"
+
+
+# Disable mounts and containerd, otherwise booting up may timeout if the host is slow
+#mounts: []
+# Expose host directories to the guest, the mount point might be accessible from all UIDs in the guest
+# 🟢 Builtin default: null (Mount nothing)
+# 🔵 This file: Mount the home as read-only, /tmp/lima as writable
+mounts:
+- location: "~"
+  # CAUTION: `writable` SHOULD be false for the home directory.
+  # Setting `writable` to true is possible, but untested and dangerous.
+  # 🟢 Builtin default: false
+  writable: null
+  sshfs:
+    # Enabling the SSHFS cache will increase performance of the mounted filesystem, at
+    # the cost of potentially not reflecting changes made on the host in a timely manner.
+    # Warning: It looks like PHP filesystem access does not work correctly when
+    # the cache is disabled.
+    # 🟢 Builtin default: true
+    cache: null
+    # SSHFS has an optional flag called 'follow_symlinks'. This allows mounts
+    # to be properly resolved in the guest os and allow for access to the
+    # contents of the symlink. As a result, symlinked files & folders on the Host
+    # system will look and feel like regular files directories in the Guest OS.
+    # 🟢 Builtin default: false
+    followSymlinks: null
+  9p:
+    # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
+    # 🟢 Builtin default: "mapped-xattr"
+    securityModel: null
+    # Select 9P protocol version. Valid options are: "9p2000" (legacy), "9p2000.u", "9p2000.L".
+    # 🟢 Builtin default: "9p2000.L"
+    protocolVersion: null
+    # The number of bytes to use for 9p packet payload, where 4KiB is the absolute minimum.
+    # 🟢 Builtin default: "128KiB"
+    msize: null
+    # Specifies a caching policy. Valid options are: "none", "loose", "fscache" and "mmap".
+    # Try choosing "mmap" or "none" if you see a stability issue with the default "fscache".
+    # See https://www.kernel.org/doc/Documentation/filesystems/9p.txt
+    # 🟢 Builtin default: "fscache" for non-writable mounts, "mmap" for writable mounts
+    cache: null
+- location: "/tmp/lima"
+  # 🟢 Builtin default: false
+  # 🔵 This file: true (only for "/tmp/lima")
+  writable: true
+
+# Mount type for above mounts, such as "reverse-sshfs" (from sshocker) or "9p" (EXPERIMENTAL, from QEMU’s virtio-9p-pci, aka virtfs)
+# 🟢 Builtin default: "reverse-sshfs"
+mountType: null
+
+
+containerd:
+  system: false
+  user: false
