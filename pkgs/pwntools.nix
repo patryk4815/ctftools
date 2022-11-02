@@ -34,7 +34,7 @@ buildPythonPackage rec {
     owner = "Gallopsled";
     repo = "pwntools";
     rev = version;
-    sha256 = "sha256-iZ92YkZEOrEoeNa5hFTyvYKpx+iaXUin0ga9AevBWJo=";
+    sha256 = "sha256-PpYu7jkzwOXKjaas1rgcIKGyDqPdHgmhFM1BC9HtIM4=";
   };
 
   postPatch = ''
