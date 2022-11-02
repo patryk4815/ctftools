@@ -31,7 +31,7 @@ in stdenv.mkDerivation rec {
     owner = "pwndbg";
     repo = "pwndbg";
     rev = version;
-    sha256 = "sha256-IhGdbpd0StkdjplYeHjZdyjcmpUQPrkXVKmmpvQQArY=";
+    sha256 = "sha256-OZgtbo7cLW2QYfZvmp2mZW73ml6jPi+lcpz/NkTKnWM=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
