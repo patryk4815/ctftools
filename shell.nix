@@ -41,7 +41,7 @@ let
       python3 = super.python3.override { inherit packageOverrides; };
     });
 
-    pkgs = import (fetchTarball https://github.com/NixOS/nixpkgs/archive/master.tar.gz) {
+    pkgs = import (fetchTarball https://github.com/NixOS/nixpkgs/archive/nixpkgs-unstable.tar.gz) {
         overlays = [ over0 over1 ];
     };
 
