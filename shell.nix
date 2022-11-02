@@ -16,8 +16,8 @@ let
 
       # global packages
       zshNew = self.callPackage ./pkgs/zsh.nix { };
-      gdb = self.callPackage ./pkgs/gdb.nix { gdb = super.gdb; };
-      qemu = self.callPackage ./pkgs/qemu.nix { qemu = super.qemu; };
+      #gdb = self.callPackage ./pkgs/gdb.nix { gdb = super.gdb; };
+      #qemu = self.callPackage ./pkgs/qemu.nix { qemu = super.qemu; };
 
       pwndbg = self.callPackage ./pkgs/pwndbg.nix { };
       gef = self.callPackage ./pkgs/gef.nix { };
@@ -36,7 +36,7 @@ let
       # FIXME: troche ugly ale dziala - generalnie to dziwnie tutaj wyglada, ale nie wiem jak inaczej zrobic
       # python packages
       packageOverrides = self2: super2: {
-        pwntools = self2.callPackage ./pkgs/pwntools.nix { debugger = gef; };
+        pwntools = self2.callPackage ./pkgs/pwntools.nix { debugger = pwndbg; };
       };
       python3 = super.python3.override { inherit packageOverrides; };
     });
