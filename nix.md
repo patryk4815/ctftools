@@ -42,6 +42,7 @@ nix-shell '<nixpkgs>' -A pan
 # dirty build: keep cache files from last buildPhase, to compile faster this is useful to make many small changes to a large project after each change, just run `buildPhase` #cd $HOME/path/to/project
 echo "src = $src" && cd $(mktemp -d) && eval ${unpackPhase:-unpackPhase} && cd *
 
+eval ${patchPhase:-patchPhase}
 eval ${configurePhase:-configurePhase}
 eval ${buildPhase:-buildPhase}
 
